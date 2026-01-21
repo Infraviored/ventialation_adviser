@@ -156,4 +156,56 @@ logger:
     homeassistant.config_entries: info
 
     # Your integration debug logging - shows EVERYTHING from your integration
-    custom_components.ha_integration_domain: debug
+    custom_components.ventilation_advisor: debug
+
+
+
+# Fake sensors for testing
+input_number:
+  fake_indoor_temp:
+    name: Fake Indoor Temp
+    min: 10
+    max: 40
+    step: 0.1
+    unit_of_measurement: "°C"
+    initial: 21
+  fake_indoor_humidity:
+    name: Fake Indoor Humidity
+    min: 0
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    initial: 50
+  fake_outdoor_temp:
+    name: Fake Outdoor Temp
+    min: -20
+    max: 40
+    step: 0.1
+    unit_of_measurement: "°C"
+    initial: 10
+  fake_outdoor_humidity:
+    name: Fake Outdoor Humidity
+    min: 0
+    max: 100
+    step: 1
+    unit_of_measurement: "%"
+    initial: 80
+
+template:
+  - sensor:
+      - name: "Fake Indoor Temperature"
+        unit_of_measurement: "°C"
+        state: "{{ states('input_number.fake_indoor_temp') }}"
+        device_class: temperature
+      - name: "Fake Indoor Humidity"
+        unit_of_measurement: "%"
+        state: "{{ states('input_number.fake_indoor_humidity') }}"
+        device_class: humidity
+      - name: "Fake Outdoor Temperature"
+        unit_of_measurement: "°C"
+        state: "{{ states('input_number.fake_outdoor_temp') }}"
+        device_class: temperature
+      - name: "Fake Outdoor Humidity"
+        unit_of_measurement: "%"
+        state: "{{ states('input_number.fake_outdoor_humidity') }}"
+        device_class: humidity

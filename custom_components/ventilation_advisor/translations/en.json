@@ -1,0 +1,57 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Ventilation Advisor: Global Setup",
+                "description": "Configure the global outdoor sensors for the whole system.",
+                "data": {
+                    "outdoor_temp": "Outdoor Temperature Sensor",
+                    "outdoor_humidity": "Outdoor Humidity Sensor"
+                }
+            }
+        },
+        "abort": {
+            "single_instance_allowed": "Only one instance of Ventilation Advisor is allowed. Use Options to manage rooms."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Manage Ventilation Advisor",
+                "menu_options": {
+                    "add_room": "Add a Room",
+                    "remove_room": "Remove a Room",
+                    "system_config": "Configure Global Sensors"
+                }
+            },
+            "add_room": {
+                "title": "Add Room",
+                "data": {
+                    "name": "Room Name",
+                    "temp_sensor": "Indoor Temperature Sensor",
+                    "humidity_sensor": "Indoor Humidity Sensor",
+                    "co2_sensor": "Indoor CO2 Sensor (Optional)",
+                    "floor_area": "Floor Area (m²)",
+                    "ceiling_height": "Ceiling Height (m)"
+                }
+            },
+            "system_config": {
+                "title": "System Configuration",
+                "data": {
+                    "outdoor_temp": "Outdoor Temperature Sensor",
+                    "outdoor_humidity": "Outdoor Humidity Sensor"
+                }
+            },
+            "remove_room": {
+                "title": "Remove Room",
+                "data": {
+                    "room_to_remove": "Select Room to Remove"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "This room is already configured.",
+            "no_rooms_to_remove": "There are no rooms to remove."
+        }
+    }
+}
