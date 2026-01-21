@@ -1,0 +1,13 @@
+{
+  "domain": "ventilation_advisor",
+  "name": "Ventilation Advisor",
+  "codeowners": [
+    "@Infraviored"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/Infraviored/ventiallation-adviser",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/Infraviored/ventiallation-adviser/issues",
+  "version": "0.1.0"
+}
