@@ -1,4 +1,4 @@
-# Ventilation Advisor
+# <img src="./custom_components/ventilation_advisor/icon.png" width="32" align="center" alt="Ventilation Advisor Icon"> Ventilation Advisor
 
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
@@ -8,7 +8,6 @@
 
 Empowering you to balance **Health**, **Drying Speed**, and **Energy Efficiency** using real building physics.
 
-<img src="./custom_components/ventilation_advisor/icon.png" width="120" alt="Ventilation Advisor Icon">
 
 ---
 

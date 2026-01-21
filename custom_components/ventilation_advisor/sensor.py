@@ -111,10 +111,10 @@ class VentilationSensorBase(SensorEntity):
             self._entry.data[CONF_OUTDOOR_TEMP],
             self._entry.data[CONF_OUTDOOR_HUMIDITY],
         ]
-        if self._room:
-            ids.extend([self._room[CONF_INDOOR_TEMP], self._room[CONF_INDOOR_HUMIDITY]])
-            if self._room.get(CONF_CO2_SENSOR):
-                ids.append(self._room[CONF_CO2_SENSOR])
+        if room := self._room:
+            ids.extend([room[CONF_INDOOR_TEMP], room[CONF_INDOOR_HUMIDITY]])
+            if room.get(CONF_CO2_SENSOR):
+                ids.append(room[CONF_CO2_SENSOR])
         return ids
 
     def _get_float_state(self, entity_id):
@@ -133,7 +133,7 @@ class GlobalOutdoorAHSensor(VentilationSensorBase):
     """Global Outdoor AH."""
 
     _attr_icon = "mdi:water"
-    _attr_unit_of_measurement = "g/m³"
+    _attr_native_unit_of_measurement = "g/m³"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, entry):
@@ -154,10 +154,10 @@ class IndoorAHSensor(VentilationSensorBase):
     """Room AH."""
 
     _attr_icon = "mdi:water"
-    _attr_unit_of_measurement = "g/m³"
+    _attr_native_unit_of_measurement = "g/m³"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(self, entry, room):
+    def __init__(self, entry: ConfigEntry, room: dict):
         """Initialize indoor humidity sensor."""
         super().__init__(entry, room)
         self._attr_name = f"{room[CONF_ROOM_NAME]} Absolute Humidity"
@@ -166,8 +166,10 @@ class IndoorAHSensor(VentilationSensorBase):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        t = self._get_float_state(self._room[CONF_INDOOR_TEMP])
-        h = self._get_float_state(self._room[CONF_INDOOR_HUMIDITY])
+        if not (room := self._room):
+            return None
+        t = self._get_float_state(room[CONF_INDOOR_TEMP])
+        h = self._get_float_state(room[CONF_INDOOR_HUMIDITY])
         return calculate_absolute_humidity(t, h) if t is not None and h is not None else None
 
 
@@ -175,10 +177,10 @@ class WaterContentSensor(VentilationSensorBase):
     """Room Water Content (ml)."""
 
     _attr_icon = "mdi:water-percent"
-    _attr_unit_of_measurement = "ml"
+    _attr_native_unit_of_measurement = "ml"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(self, entry, room):
+    def __init__(self, entry: ConfigEntry, room: dict):
         """Initialize water content sensor."""
         super().__init__(entry, room)
         self._attr_name = f"{room[CONF_ROOM_NAME]} Water Content"
@@ -187,11 +189,13 @@ class WaterContentSensor(VentilationSensorBase):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        t = self._get_float_state(self._room[CONF_INDOOR_TEMP])
-        h = self._get_float_state(self._room[CONF_INDOOR_HUMIDITY])
+        if not (room := self._room):
+            return None
+        t = self._get_float_state(room[CONF_INDOOR_TEMP])
+        h = self._get_float_state(room[CONF_INDOOR_HUMIDITY])
         if t is not None and h is not None:
             ah = calculate_absolute_humidity(t, h)
-            volume = self._room[CONF_FLOOR_AREA] * self._room[CONF_CEILING_HEIGHT]
+            volume = room[CONF_FLOOR_AREA] * room[CONF_CEILING_HEIGHT]
             return round(ah * volume, 1)
         return None
 
@@ -200,10 +204,10 @@ class MouldRiskSensor(VentilationSensorBase):
     """Mould Risk 0-100% (Sigmoid Probability)."""
 
     _attr_icon = "mdi:alert-octagon"
-    _attr_unit_of_measurement = "%"
+    _attr_native_unit_of_measurement = "%"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(self, entry, room):
+    def __init__(self, entry: ConfigEntry, room: dict):
         """Initialize mould risk sensor."""
         super().__init__(entry, room)
         self._attr_name = f"{room[CONF_ROOM_NAME]} Mould Risk"
@@ -212,7 +216,9 @@ class MouldRiskSensor(VentilationSensorBase):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        rh = self._get_float_state(self._room[CONF_INDOOR_HUMIDITY])
+        if not (room := self._room):
+            return None
+        rh = self._get_float_state(room[CONF_INDOOR_HUMIDITY])
         if rh is None:
             return None
 
@@ -236,10 +242,10 @@ class DryingPotentialSensor(VentilationSensorBase):
     """Drying Potential (AH Delta g/m³)."""
 
     _attr_icon = "mdi:weather-windy"
-    _attr_unit_of_measurement = "g/m³"
+    _attr_native_unit_of_measurement = "g/m³"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
-    def __init__(self, entry, room):
+    def __init__(self, entry: ConfigEntry, room: dict):
         """Initialize drying potential sensor."""
         super().__init__(entry, room)
         self._attr_name = f"{room[CONF_ROOM_NAME]} Drying Potential"
@@ -248,11 +254,13 @@ class DryingPotentialSensor(VentilationSensorBase):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        i_t = self._get_float_state(self._room[CONF_INDOOR_TEMP])
-        i_h = self._get_float_state(self._room[CONF_INDOOR_HUMIDITY])
+        if not (room := self._room):
+            return None
+        i_t = self._get_float_state(room[CONF_INDOOR_TEMP])
+        i_h = self._get_float_state(room[CONF_INDOOR_HUMIDITY])
         o_t = self._get_float_state(self._entry.data[CONF_OUTDOOR_TEMP])
         o_h = self._get_float_state(self._entry.data[CONF_OUTDOOR_HUMIDITY])
-        if None in (i_t, i_h, o_t, o_h):
+        if i_t is None or i_h is None or o_t is None or o_h is None:
             return None
         i_ah = calculate_absolute_humidity(i_t, i_h)
         o_ah = calculate_absolute_humidity(o_t, o_h)
@@ -264,7 +272,7 @@ class VentilationEfficiencySensor(VentilationSensorBase):
 
     _attr_icon = "mdi:leaf"
 
-    def __init__(self, entry, room):
+    def __init__(self, entry: ConfigEntry, room: dict):
         """Initialize ventilation efficiency sensor."""
         super().__init__(entry, room)
         self._attr_name = f"{room[CONF_ROOM_NAME]} Ventilation Efficiency"
@@ -273,12 +281,14 @@ class VentilationEfficiencySensor(VentilationSensorBase):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        i_t = self._get_float_state(self._room[CONF_INDOOR_TEMP])
+        if not (room := self._room):
+            return "Unknown"
+        i_t = self._get_float_state(room[CONF_INDOOR_TEMP])
         o_t = self._get_float_state(self._entry.data[CONF_OUTDOOR_TEMP])
-        i_h = self._get_float_state(self._room[CONF_INDOOR_HUMIDITY])
+        i_h = self._get_float_state(room[CONF_INDOOR_HUMIDITY])
         o_h = self._get_float_state(self._entry.data[CONF_OUTDOOR_HUMIDITY])
 
-        if None in (i_t, o_t, i_h, o_h):
+        if i_t is None or o_t is None or i_h is None or o_h is None:
             return "Unknown"
 
         dp = calculate_absolute_humidity(i_t, i_h) - calculate_absolute_humidity(o_t, o_h)
@@ -310,7 +320,7 @@ class MasterAdviceSensor(VentilationSensorBase):
 
     _attr_icon = "mdi:window-open-variant"
 
-    def __init__(self, entry, room):
+    def __init__(self, entry: ConfigEntry, room: dict):
         """Initialize master advice sensor."""
         super().__init__(entry, room)
         self._attr_name = f"{room[CONF_ROOM_NAME]} Master Advice"
@@ -319,22 +329,24 @@ class MasterAdviceSensor(VentilationSensorBase):
     @property
     def native_value(self):
         """Return the state of the sensor."""
+        if not (room := self._room):
+            return "Unknown"
         # 1. Fetch Metrics
-        risk_sensor = MouldRiskSensor(self._entry, self._room)
+        risk_sensor = MouldRiskSensor(self._entry, room)
         risk_sensor.hass = self.hass
         risk_val = risk_sensor.native_value
 
-        power_sensor = DryingPotentialSensor(self._entry, self._room)
+        power_sensor = DryingPotentialSensor(self._entry, room)
         power_sensor.hass = self.hass
         power_val = power_sensor.native_value
 
-        eff_sensor = VentilationEfficiencySensor(self._entry, self._room)
+        eff_sensor = VentilationEfficiencySensor(self._entry, room)
         eff_sensor.hass = self.hass
         eff_val = eff_sensor.native_value
 
-        co2_val = self._get_float_state(self._room.get(CONF_CO2_SENSOR))
+        co2_val = self._get_float_state(room.get(CONF_CO2_SENSOR))
 
-        if None in (risk_val, power_val) or eff_val == "Unknown":
+        if risk_val is None or power_val is None or eff_val == "Unknown" or eff_val is None:
             return "Unknown"
 
         # 2. Safety Overrides (Biological Risk #1)

@@ -8,6 +8,6 @@
   "documentation": "https://github.com/Infraviored/ventialation_adviser",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/Infraviored/ventialation_adviser/issues",
-  "version": "1.0.0",
-  "requirements": []
+  "requirements": [],
+  "version": "1.0.0"
 }
