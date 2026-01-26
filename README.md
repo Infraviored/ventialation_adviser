@@ -110,7 +110,7 @@ The "Brain" optimizes for **Health > Physics > Comfort**.
 
 Click the button below to open the integration directly in HACS:
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=jpawlowski&repository=ventialation_adviser&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Infraviored&repository=ventialation_adviser&category=integration)
 
 Alternatively, follow manual steps:
 1. Ensure [HACS](https://hacs.xyz/) is installed.
@@ -176,4 +176,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [maintenance-shield]: https://img.shields.io/badge/maintainer-%40Infraviored-blue.svg?style=for-the-badge
 [releases-shield]: https://img.shields.io/github/release/Infraviored/ventialation_adviser.svg?style=for-the-badge
 [releases]: https://github.com/Infraviored/ventialation_adviser/releases
-[user_profile]: https://github.com/jpawlowski
+[user_profile]: https://github.com/Infraviored
