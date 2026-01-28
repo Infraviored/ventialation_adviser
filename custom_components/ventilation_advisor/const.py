@@ -17,6 +17,15 @@ CONF_INDOOR_HUMIDITY = "humidity_sensor"
 CONF_FLOOR_AREA = "floor_area"
 CONF_CEILING_HEIGHT = "ceiling_height"
 CONF_CO2_SENSOR = "co2_sensor"
+CONF_AREA_ID = "area_id"
+CONF_HAS_SLOPE = "has_slope"
+CONF_SLOPE_A = "slope_a"
+CONF_SLOPE_B = "slope_b"
+CONF_SLOPE_C = "slope_c"
+CONF_MOULD_SAFE_OVERRIDE = "mould_safe_override"
+CONF_MOULD_CRITICAL_OVERRIDE = "mould_critical_override"
+CONF_CO2_WARN_OVERRIDE = "co2_warn_override"
+CONF_CO2_CRITICAL_OVERRIDE = "co2_critical_override"
 
 # Defaults
 DEFAULT_CEILING_HEIGHT = 2.8

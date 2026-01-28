@@ -13,17 +13,27 @@ from homeassistant.helpers.event import async_track_state_change_event
 from .const import (
     CO2_CRITICAL,
     CO2_WARN,
+    CONF_AREA_ID,
     CONF_CEILING_HEIGHT,
+    CONF_CO2_CRITICAL_OVERRIDE,
     CONF_CO2_SENSOR,
+    CONF_CO2_WARN_OVERRIDE,
     CONF_FLOOR_AREA,
+    CONF_HAS_SLOPE,
     CONF_INDOOR_HUMIDITY,
     CONF_INDOOR_TEMP,
+    CONF_MOULD_CRITICAL_OVERRIDE,
+    CONF_MOULD_SAFE_OVERRIDE,
     CONF_OUTDOOR_HUMIDITY,
     CONF_OUTDOOR_TEMP,
     CONF_ROOM_NAME,
     CONF_ROOMS,
+    CONF_SLOPE_A,
+    CONF_SLOPE_B,
+    CONF_SLOPE_C,
     CONF_STRATEGY,
     DEFAULT_STRATEGY,
+    DOMAIN,
     MAGNUS_A,
     MAGNUS_B,
     MAGNUS_C,
@@ -42,7 +52,6 @@ def calculate_absolute_humidity(temperature: float, humidity: float) -> float:
     rh = humidity
 
     # Saturation Vapor Pressure (hPa)
-    # Psat = 6.112 * exp((17.67 * T) / (T + 243.5))
     if (t + MAGNUS_C) == 0:
         return 0.0
 
@@ -52,7 +61,6 @@ def calculate_absolute_humidity(temperature: float, humidity: float) -> float:
     p_act = p_sat * (rh / 100.0)
 
     # Absolute Humidity (g/m³)
-    # AH = 216.7 * (P_act / (273.15 + T))
     ah = 216.7 * (p_act / (MAGNUS_K + t))
 
     return round(ah, 2)
@@ -78,6 +86,7 @@ async def async_setup_entry(
                 DryingPotentialSensor(entry, room),
                 VentilationEfficiencySensor(entry, room),
                 MasterAdviceSensor(entry, room),
+                RoomVolumeSensor(entry, room),
             ]
         )
 
@@ -101,6 +110,26 @@ class VentilationSensorBase(SensorEntity):
         entity_ids = self._get_listening_entities()
         self.async_on_remove(async_track_state_change_event(self.hass, entity_ids, self._async_update_event))
         self._async_update_event()
+
+    @property
+    def device_info(self):
+        """Return device information."""
+        if not self._room:
+            return None
+
+        # Group all sensors for this room into one device
+        info = {
+            "identifiers": {(DOMAIN, self._room_id)},
+            "name": self._room[CONF_ROOM_NAME],
+            "manufacturer": "Ventilation Advisor",
+            "model": "Room Advisor",
+        }
+
+        # If the user selected an area, link the device to it
+        if area_id := self._room.get(CONF_AREA_ID):
+            info["suggested_area"] = area_id
+
+        return info
 
     @callback
     def _async_update_event(self, event=None):
@@ -141,6 +170,16 @@ class GlobalOutdoorAHSensor(VentilationSensorBase):
         super().__init__(entry)
         self._attr_name = "Outdoor Absolute Humidity"
         self._attr_unique_id = f"{entry.entry_id}_global_outdoor_ah"
+
+    @property
+    def device_info(self):
+        """Return system device info."""
+        return {
+            "identifiers": {(DOMAIN, "system")},
+            "name": "Ventilation System",
+            "manufacturer": "Ventilation Advisor",
+            "entry_type": "service",
+        }
 
     @property
     def native_value(self):
@@ -196,12 +235,18 @@ class WaterContentSensor(VentilationSensorBase):
         if t is not None and h is not None:
             ah = calculate_absolute_humidity(t, h)
             volume = room[CONF_FLOOR_AREA] * room[CONF_CEILING_HEIGHT]
+
+            # Substract sloping roof volume if configured
+            if room.get(CONF_HAS_SLOPE):
+                v_slope = 0.5 * room.get(CONF_SLOPE_A, 0) * room.get(CONF_SLOPE_B, 0) * room.get(CONF_SLOPE_C, 0)
+                volume = max(0, volume - v_slope)
+
             return round(ah * volume, 1)
         return None
 
 
 class MouldRiskSensor(VentilationSensorBase):
-    """Mould Risk 0-100% (Sigmoid Probability)."""
+    """Mould Risk 0-100%."""
 
     _attr_icon = "mdi:alert-octagon"
     _attr_native_unit_of_measurement = "%"
@@ -222,19 +267,15 @@ class MouldRiskSensor(VentilationSensorBase):
         if rh is None:
             return None
 
-        # Physics:
-        # < 55%: Safe
-        # 55-80%: Linear Risk Climb
-        # > 80%: Critical (IEA Standard)
+        safe = room.get(CONF_MOULD_SAFE_OVERRIDE, MOULD_RISK_SAFE)
+        critical = room.get(CONF_MOULD_CRITICAL_OVERRIDE, MOULD_RISK_CRITICAL)
 
-        if rh < MOULD_RISK_SAFE:
+        if rh < safe:
             return 0.0
-        if rh >= MOULD_RISK_CRITICAL:
+        if rh >= critical:
             return 100.0
 
-        # Linear Interpolation between 55 and 80 maps to 0-100
-        slope = 100 / (MOULD_RISK_CRITICAL - MOULD_RISK_SAFE)
-        score = (rh - MOULD_RISK_SAFE) * slope
+        score = (rh - safe) * (100 / (critical - safe))
         return round(score, 0)
 
 
@@ -268,7 +309,7 @@ class DryingPotentialSensor(VentilationSensorBase):
 
 
 class VentilationEfficiencySensor(VentilationSensorBase):
-    """Ventilation Efficiency (Enthalpy Trade-off)."""
+    """Ventilation Efficiency."""
 
     _attr_icon = "mdi:leaf"
 
@@ -299,14 +340,11 @@ class VentilationEfficiencySensor(VentilationSensorBase):
         if dt <= 0:
             return "High (Free Cooling)"
 
-        # Enthalpy Penalty: Venting moist air loses latent heat too.
-        # If Indoor RH > 40%, we multiply the thermal cost.
         penalty_factor = 1.0
         if i_h > 40:
-            penalty_factor = 1 + ((i_h - 40) * 0.005)  # e.g. 80% RH = 1.2x cost
+            penalty_factor = 1 + ((i_h - 40) * 0.005)
 
         effective_cost = dt * penalty_factor
-
         ratio = dp / effective_cost
         if ratio > 0.3:
             return "High"
@@ -316,7 +354,7 @@ class VentilationEfficiencySensor(VentilationSensorBase):
 
 
 class MasterAdviceSensor(VentilationSensorBase):
-    """Weighted Optimization Matrix."""
+    """Master Advice."""
 
     _attr_icon = "mdi:window-open-variant"
 
@@ -331,7 +369,7 @@ class MasterAdviceSensor(VentilationSensorBase):
         """Return the state of the sensor."""
         if not (room := self._room):
             return "Unknown"
-        # 1. Fetch Metrics
+
         risk_sensor = MouldRiskSensor(self._entry, room)
         risk_sensor.hass = self.hass
         risk_val = risk_sensor.native_value
@@ -349,38 +387,32 @@ class MasterAdviceSensor(VentilationSensorBase):
         if risk_val is None or power_val is None or eff_val == "Unknown" or eff_val is None:
             return "Unknown"
 
-        # 2. Safety Overrides (Biological Risk #1)
+        # Overrides
+        c_warn = room.get(CONF_CO2_WARN_OVERRIDE, CO2_WARN)
+        c_crit = room.get(CONF_CO2_CRITICAL_OVERRIDE, CO2_CRITICAL)
+
         if risk_val >= 80:
             return "Urgent (Mould Risk)"
 
-        if co2_val is not None and co2_val >= CO2_CRITICAL:
+        if co2_val is not None and co2_val >= c_crit:
             return "Urgent (Air Quality)"
 
-        # 3. Physics Block (Negative Gradient)
         if power_val <= 0:
-            # Exception: If CO2 is warning level, we might advise "Short" vent even if wet?
-            # For now, strict physics: Don't bring water in unless critical.
-            if co2_val and co2_val >= CO2_WARN:
-                return "Recommended (Fresh Air)"  # Override for CO2
+            if co2_val and co2_val >= c_warn:
+                return "Recommended (Fresh Air)"
             return "Hold (Ineffective)"
 
-        # 4. Efficiency/Strategy Logic
-        strategy = self._entry.options.get(CONF_STRATEGY, DEFAULT_STRATEGY)
+        strategy = room.get(CONF_STRATEGY, self._entry.options.get(CONF_STRATEGY, DEFAULT_STRATEGY))
 
-        # Strategy 1 (Energy Saver) -> Require High Efficiency or Critical Risk
         if strategy == STRATEGY_ENERGY_SAVER:
             if eff_val.startswith("High"):
                 return "Optional (Efficient)"
             return "Hold (Eco Mode)"
 
-        # Strategy 5 (Aggressive) -> Any positive drying power
         if strategy == STRATEGY_AGGRESSIVE:
             return "Recommended (Drying)"
 
-        # 5. General Logic (Balanced / Fresh Air)
-        # Higher strategies lower the barrier for recommendation
         is_fresh_air_lover = strategy == STRATEGY_FRESH_AIR
-
         if risk_val > (30 if is_fresh_air_lover else 50):
             return "Recommended"
         if power_val > (1.0 if is_fresh_air_lover else 2.0):
@@ -389,3 +421,28 @@ class MasterAdviceSensor(VentilationSensorBase):
             return "Optional (Efficient)"
 
         return "Hold (Low Necessity)"
+
+
+class RoomVolumeSensor(VentilationSensorBase):
+    """Room Volume (Diagnostic)."""
+
+    _attr_icon = "mdi:cube-outline"
+    _attr_native_unit_of_measurement = "m³"
+    _attr_entity_category = "diagnostic"
+
+    def __init__(self, entry: ConfigEntry, room: dict):
+        """Initialize."""
+        super().__init__(entry, room)
+        self._attr_name = f"{room[CONF_ROOM_NAME]} Calculated Volume"
+        self._attr_unique_id = f"{entry.entry_id}_{self._room_id}_volume"
+
+    @property
+    def native_value(self):
+        """Return volume."""
+        if not (room := self._room):
+            return None
+        volume = room[CONF_FLOOR_AREA] * room[CONF_CEILING_HEIGHT]
+        if room.get(CONF_HAS_SLOPE):
+            v_slope = 0.5 * room.get(CONF_SLOPE_A, 0) * room.get(CONF_SLOPE_B, 0) * room.get(CONF_SLOPE_C, 0)
+            volume = max(0, volume - v_slope)
+        return round(volume, 2)
