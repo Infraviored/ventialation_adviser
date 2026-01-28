@@ -20,26 +20,68 @@
                 "title": "Manage Ventilation Advisor",
                 "menu_options": {
                     "add_room": "Add a Room",
+                    "edit_room": "Edit a Room",
                     "remove_room": "Remove a Room",
                     "system_config": "Configure Global Sensors"
                 }
             },
-            "add_room": {
-                "title": "Add Room",
+            "edit_room": {
+                "title": "Edit Room",
                 "data": {
-                    "name": "Room Name",
+                    "room_to_edit": "Select Room to Edit"
+                }
+            },
+            "room_base": {
+                "title": "Room Basic Settings",
+                "description": "Define the physical layout of the room. This determines the total air volume.",
+                "data": {
+                    "name": "Room Name (Pre-filled if area chosen)",
+                    "area_id": "Home Assistant Area",
+                    "floor_area": "Floor Area (m²)",
+                    "ceiling_height": "Ceiling Height (m)",
+                    "has_slope": "Room has a sloping roof?"
+                }
+            },
+            "room_slope": {
+                "title": "Sloping Roof (Subtraction)",
+                "description": "Define the volume to subtract. Imagine a wedge shaped like a right-angled triangular prism. V = 0.5 * Length * Width * Height.",
+                "data": {
+                    "slope_a": "Wedge Width (side 1)",
+                    "slope_b": "Wedge Height (side 2)",
+                    "slope_c": "Wedge Length (depth)"
+                }
+            },
+            "room_sensors": {
+                "title": "Room Sensors",
+                "description": "Select the sensors for this specific room. Note: If an area was selected, these are filtered for you.",
+                "data": {
                     "temp_sensor": "Indoor Temperature Sensor",
                     "humidity_sensor": "Indoor Humidity Sensor",
-                    "co2_sensor": "Indoor CO2 Sensor (Optional)",
-                    "floor_area": "Floor Area (m²)",
-                    "ceiling_height": "Ceiling Height (m)"
+                    "co2_sensor": "Indoor CO2 Sensor (Optional)"
                 }
+            },
+            "room_advanced": {
+                "title": "Advanced Room Settings",
+                "description": "Customize how this specific room calculates advice. Leave as default to use global settings.",
+                "data": {
+                    "strategy": "Room Suggestion Frequency",
+                    "mould_safe_override": "Safe Humidity Threshold (%)",
+                    "mould_critical_override": "Critical Humidity Threshold (%)",
+                    "co2_warn_override": "CO2 Warning Level (ppm)",
+                    "co2_critical_override": "CO2 Critical Level (ppm)"
+                }
+            },
+            "add_room": {
+                "title": "Add Room",
+                "description": "General settings for the new room."
             },
             "system_config": {
                 "title": "System Configuration",
+                "description": "Global settings used as defaults for all rooms.",
                 "data": {
                     "outdoor_temp": "Outdoor Temperature Sensor",
-                    "outdoor_humidity": "Outdoor Humidity Sensor"
+                    "outdoor_humidity": "Outdoor Humidity Sensor",
+                    "strategy": "Default Suggestion Frequency"
                 }
             },
             "remove_room": {
@@ -51,7 +93,11 @@
         },
         "abort": {
             "already_configured": "This room is already configured.",
-            "no_rooms_to_remove": "There are no rooms to remove."
+            "no_rooms_to_remove": "There are no rooms to remove.",
+            "no_rooms": "No rooms configured yet."
+        },
+        "error": {
+            "name_required": "Please provide a room name or select an area."
         }
     }
 }
