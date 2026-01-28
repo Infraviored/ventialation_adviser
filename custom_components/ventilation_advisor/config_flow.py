@@ -78,7 +78,7 @@ class VentilationOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         """Initialize options flow."""
-        self._config_entry = config_entry
+        self.entry = config_entry
         self._rooms = list(config_entry.options.get(CONF_ROOMS, []))
         self._current_room_index = None
         self._temp_room_data = {}
@@ -92,8 +92,8 @@ class VentilationOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def _update_system_data(self, user_input):
         """Helper to update both data and options for system-wide keys."""
-        new_data = {**self._config_entry.data}
-        new_options = {**self._config_entry.options}
+        new_data = {**self.entry.data}
+        new_options = {**self.entry.options}
 
         for key in [CONF_OUTDOOR_TEMP, CONF_OUTDOOR_HUMIDITY]:
             if key in user_input:
@@ -102,7 +102,7 @@ class VentilationOptionsFlowHandler(config_entries.OptionsFlow):
         if CONF_STRATEGY in user_input:
             new_options[CONF_STRATEGY] = user_input[CONF_STRATEGY]
 
-        self.hass.config_entries.async_update_entry(self._config_entry, data=new_data, options=new_options)
+        self.hass.config_entries.async_update_entry(self.entry, data=new_data, options=new_options)
         return self.async_create_entry(title="", data=new_options)
 
     async def async_step_system_config(self, user_input=None):
@@ -116,17 +116,17 @@ class VentilationOptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         CONF_OUTDOOR_TEMP,
-                        default=self._config_entry.data.get(CONF_OUTDOOR_TEMP),
+                        default=self.entry.data.get(CONF_OUTDOOR_TEMP),
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
                     ),
                     vol.Required(
                         CONF_OUTDOOR_HUMIDITY,
-                        default=self._config_entry.data.get(CONF_OUTDOOR_HUMIDITY),
+                        default=self.entry.data.get(CONF_OUTDOOR_HUMIDITY),
                     ): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class="humidity")),
                     vol.Required(
                         CONF_STRATEGY,
-                        default=self._config_entry.options.get(CONF_STRATEGY, DEFAULT_STRATEGY),
+                        default=self.entry.options.get(CONF_STRATEGY, DEFAULT_STRATEGY),
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=STRATEGY_OPTIONS,
@@ -342,4 +342,4 @@ class VentilationOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def _update_rooms(self):
         """Update the config entry options."""
-        return self.async_create_entry(title="", data={**self._config_entry.options, CONF_ROOMS: self._rooms})
+        return self.async_create_entry(title="", data={**self.entry.options, CONF_ROOMS: self._rooms})
